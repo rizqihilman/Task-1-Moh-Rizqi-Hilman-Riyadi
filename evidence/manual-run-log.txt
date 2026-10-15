@@ -1,0 +1,146 @@
+# Manual API test run - Petstore
+# Base URL : https://petstore.swagger.io/v2
+# Started  : 2026-10-15T02:25:32.381Z
+# Tool     : Node.js v26.7.0 fetch script (tools/run-manual-api-tests.mjs)
+
+[PASS] API-POST-001 - Create a new pet with all valid fields
+  request : POST https://petstore.swagger.io/v2/pet
+  expected: HTTP 200; response body echoes the created pet with the same id, name, photoUrls, tags and status
+  actual  : HTTP 200 in 1525 ms; body: {"id":311323671,"category":{"id":1,"name":"dogs"},"name":"QA_Doggo_1792031132367","photoUrls":["https://example.com/qa-dog.jpg"],"tags":[{"id":7,"name":"qa"}],"status":"available"}
+  notes   : All echoed fields match the payload.
+
+[PASS] API-POST-002 - Created pet can be retrieved by GET /pet/{petId}
+  request : GET https://petstore.swagger.io/v2/pet/311323671
+  expected: HTTP 200; same id and name as the created pet
+  actual  : HTTP 200 in 257 ms; body: {"id":311323671,"category":{"id":1,"name":"dogs"},"name":"QA_Doggo_1792031132367","photoUrls":["https://example.com/qa-dog.jpg"],"tags":[{"id":7,"name":"qa"}],"status":"available"}
+  notes   : Verifies the POST actually persisted the record, not only echoed it.
+
+[PASS] API-POST-003 - Create a pet with only the required fields (no category, no tags)
+  request : POST https://petstore.swagger.io/v2/pet
+  expected: HTTP 200; pet is created; category and tags are optional and may be omitted
+  actual  : HTTP 200 in 256 ms; body: {"id":311323673,"name":"QA_Minimal_1792031132367","photoUrls":["https://example.com/qa-min.jpg"],"tags":[]}
+  notes   : Optional fields are not required - matches the documented schema.
+
+[FAIL] API-POST-004 - Empty payload must be rejected
+  request : POST https://petstore.swagger.io/v2/pet
+  expected: HTTP 405 Invalid input - name and photoUrls are required fields
+  actual  : HTTP 200 in 258 ms; body: {"id":3174071910010089253,"photoUrls":[],"tags":[]}
+  notes   : Defect: the API accepts an empty payload and creates a nameless record with a generated id (3174071910010089500). See BUG-002.
+
+[FAIL] API-POST-005 - Payload without required field "name" must be rejected
+  request : POST https://petstore.swagger.io/v2/pet
+  expected: HTTP 405 Invalid input - "name" is a required field per the schema
+  actual  : HTTP 200 in 254 ms; body: {"id":311323675,"photoUrls":["https://example.com/qa-x.jpg"],"tags":[],"status":"available"}
+  notes   : Defect: pet is created without a name. See BUG-002. Record was cleaned up afterwards (DELETE).
+
+[FAIL] API-POST-006 - Payload without required field "photoUrls" must be rejected
+  request : POST https://petstore.swagger.io/v2/pet
+  expected: HTTP 405 Invalid input - "photoUrls" is a required field per the schema
+  actual  : HTTP 200 in 257 ms; body: {"id":311323676,"name":"QA_NoPhoto_1792031132367","photoUrls":[],"tags":[],"status":"available"}
+  notes   : Defect: pet is created with photoUrls defaulted to []. See BUG-002. Record was cleaned up afterwards (DELETE).
+
+[PASS] API-POST-007 - Malformed JSON body must be rejected
+  request : POST https://petstore.swagger.io/v2/pet
+  expected: HTTP 400; parse error, no pet is created
+  actual  : HTTP 400 in 258 ms; body: {"code":400,"type":"unknown","message":"bad input"}
+  notes   : Server returns 400 "bad input" as expected.
+
+[FAIL] API-POST-008 - Status value outside the documented enum must be rejected
+  request : POST https://petstore.swagger.io/v2/pet
+  expected: HTTP 405 Invalid input - "status" only allows available, pending, sold
+  actual  : HTTP 200 in 255 ms; body: {"id":311323678,"name":"QA_BadStatus_1792031132367","photoUrls":[],"tags":[],"status":"sleepy"} | GET /pet/311323678 -> HTTP 200, status field: "sleepy"
+  notes   : Defect: invalid status is accepted and persisted. See BUG-002. Record was cleaned up afterwards (DELETE).
+
+[PASS] API-POST-009 - Boundary: 255-character name is stored without truncation
+  request : POST https://petstore.swagger.io/v2/pet
+  expected: HTTP 200; name is stored and returned in full (no documented length limit)
+  actual  : HTTP 200 in 254 ms; echoed name length: 255 chars
+  notes   : No truncation observed. Record was cleaned up afterwards (DELETE).
+
+[FAIL] API-POST-010 - Boundary: negative pet id must be rejected or honored as sent
+  request : POST https://petstore.swagger.io/v2/pet
+  expected: HTTP 405 (invalid input) or HTTP 200 with id -1 preserved
+  actual  : HTTP 200 in 253 ms; returned id: 3174071910010089500 (sent -1) | GET /pet/3174071910010089500 -> HTTP 404
+  notes   : Defect: id -1 is silently replaced with 3174071910010089500; the record cannot be retrieved with either the sent id (-1) or the returned id. See BUG-003.
+
+[PASS] API-GET-001 - Find pets by status "available" returns only available pets
+  request : GET https://petstore.swagger.io/v2/pet/findByStatus?status=available
+  expected: HTTP 200; JSON array where every element has status "available"
+  actual  : HTTP 200 in 819 ms; 686 pets returned, elements with status != available: 0
+  notes   : Array is large (public shared dataset) - full array was parsed and validated in code.
+
+[PASS] API-GET-002 - Find pets by status "pending" (valid status, possibly empty result)
+  request : GET https://petstore.swagger.io/v2/pet/findByStatus?status=pending
+  expected: HTTP 200; JSON array (may be empty) where every element has status "pending"
+  actual  : HTTP 200 in 254 ms; 0 pets returned, elements with status != pending: 0
+  notes   : Empty result is valid here because the shared dataset currently has no pending pets.
+
+[PASS] API-GET-003 - Find pets by status "sold" returns only sold pets
+  request : GET https://petstore.swagger.io/v2/pet/findByStatus?status=sold
+  expected: HTTP 200; JSON array where every element has status "sold"
+  actual  : HTTP 200 in 258 ms; 212 pets returned, elements with status != sold: 0
+
+[PASS] API-GET-004 - Multiple status parameters are combined (available + pending)
+  request : GET https://petstore.swagger.io/v2/pet/findByStatus?status=available&status=pending
+  expected: HTTP 200; JSON array where every element has status "available" or "pending"
+  actual  : HTTP 200 in 550 ms; 686 pets returned, elements outside {available, pending}: 0
+
+[FAIL] API-GET-005 - Invalid status value must be rejected with 400
+  request : GET https://petstore.swagger.io/v2/pet/findByStatus?status=notastatus
+  expected: HTTP 400 Invalid status value
+  actual  : HTTP 200 in 266 ms; body: []
+  notes   : Defect: invalid value is treated as a filter and returns 200 with an empty array instead of 400. See BUG-001.
+
+[FAIL] API-GET-006 - Missing required query parameter "status" must be rejected
+  request : GET https://petstore.swagger.io/v2/pet/findByStatus
+  expected: HTTP 400 (status is a required query parameter)
+  actual  : HTTP 200 in 258 ms; body: []
+  notes   : Defect: missing parameter returns 200 with an empty array, hiding the client mistake. See BUG-001.
+
+[PASS] API-GET-007 - Newly created pet appears in its status list and disappears after deletion
+  request : GET https://petstore.swagger.io/v2/pet/findByStatus?status=pending
+  expected: Pet is present in the pending list after creation and absent after deletion
+  actual  : POST -> HTTP 200; present in list after create: true; DELETE -> HTTP 200; present after delete: false
+  notes   : Cross-endpoint check: create -> search -> delete -> search.
+
+[PASS] API-DELETE-001 - Delete an existing pet returns 200 and the deleted id
+  request : DELETE https://petstore.swagger.io/v2/pet/311323690
+  expected: HTTP 200; body contains code 200 and message = deleted pet id
+  actual  : HTTP 200 in 259 ms; body: {"code":200,"type":"unknown","message":"311323690"}
+
+[PASS] API-DELETE-002 - Deleted pet is no longer retrievable by id
+  request : GET https://petstore.swagger.io/v2/pet/311323690
+  expected: HTTP 404 "Pet not found"
+  actual  : HTTP 404 in 255 ms; body: {"code":1,"type":"error","message":"Pet not found"}
+  notes   : Confirms the deletion is effective on this endpoint, not just acknowledged.
+
+[PASS] API-DELETE-003 - Deleted pet no longer appears in findByStatus results
+  request : GET https://petstore.swagger.io/v2/pet/findByStatus?status=available
+  expected: HTTP 200; deleted pet id is absent from the array
+  actual  : HTTP 200 in 272 ms; array size: 686; deleted pet present: false
+
+[PASS] API-DELETE-004 - Delete a pet that does not exist returns 404
+  request : DELETE https://petstore.swagger.io/v2/pet/311323769
+  expected: HTTP 404 Pet not found
+  actual  : HTTP 404 in 255 ms; body: (empty body)
+  notes   : Status code matches the documentation. Note: for numeric ids the 404 body is empty, while non-numeric ids return a JSON error - inconsistent format (low impact, see API-DELETE-005).
+
+[FAIL] API-DELETE-005 - Non-numeric petId must be rejected with 400 Invalid ID
+  request : DELETE https://petstore.swagger.io/v2/pet/abc
+  expected: HTTP 400 Invalid ID supplied
+  actual  : HTTP 404 in 255 ms; body: {"code":404,"type":"unknown","message":"java.lang.NumberFormatException: For input string: \"abc\""}
+  notes   : Defect: returns 404 with an internal java.lang.NumberFormatException message instead of 400. See BUG-004.
+
+[PASS] API-DELETE-006 - Boundary: pet id 0 does not exist
+  request : DELETE https://petstore.swagger.io/v2/pet/0
+  expected: HTTP 404 Pet not found (id 0 is a valid integer but no such pet exists)
+  actual  : HTTP 404 in 265 ms; body: (empty body)
+  notes   : Empty 404 body for numeric ids, same as API-DELETE-004.
+
+[PASS] API-DELETE-007 - Boundary: DELETE without a petId is not allowed
+  request : DELETE https://petstore.swagger.io/v2/pet
+  expected: HTTP 405 Method Not Allowed (no such route)
+  actual  : HTTP 405 in 260 ms; body: {"code":405,"type":"unknown"}
+
+Summary: 24 total, 16 pass, 8 fail, 0 blocked, 0 not executed
+Finished : 2026-10-15T02:25:43.298Z

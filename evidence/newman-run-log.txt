@@ -1,0 +1,132 @@
+newman
+
+QA Take Home - Petstore API (Task 1 Manual Cases)
+
+□ POST /pet
+└ API-POST-001 Create a pet with a valid payload
+  POST https://petstore.swagger.io/v2/pet [200 OK, 512B, 1210ms]
+  √  Status code is 200
+  √  Response echoes the submitted id and name
+  √  photoUrls and status are echoed
+
+└ API-POST-003 Create a pet with required fields only
+  POST https://petstore.swagger.io/v2/pet [200 OK, 427B, 263ms]
+  √  Status code is 200
+  √  Pet is created with the submitted id
+
+└ API-POST-004 Empty payload [expected fail - BUG-002]
+  POST https://petstore.swagger.io/v2/pet [200 OK, 377B, 256ms]
+  1. Empty payload is rejected with 405
+
+└ API-POST-005 Missing required field name [expected fail - BUG-002]
+  POST https://petstore.swagger.io/v2/pet [200 OK, 423B, 264ms]
+  2. Missing name is rejected with 405
+
+└ API-POST-007 Malformed JSON body
+  POST https://petstore.swagger.io/v2/pet [400 Bad Request, 386B, 266ms]
+  √  Malformed JSON is rejected with 400
+
+└ API-POST-008 Status outside the enum [expected fail - BUG-002]
+  POST https://petstore.swagger.io/v2/pet [200 OK, 415B, 255ms]
+  3. Invalid status value is rejected with 405
+
+□ GET /pet/findByStatus
+└ API-GET-001 Find pets by status=available
+  GET https://petstore.swagger.io/v2/pet/findByStatus?status=available [200 OK, 88.16kB, 1256ms]
+  √  Status code is 200
+  √  Response is an array
+  √  Every pet matches the requested status
+
+└ API-GET-002 Find pets by status=pending
+  GET https://petstore.swagger.io/v2/pet/findByStatus?status=pending [200 OK, 328B, 256ms]
+  √  Status code is 200
+  √  Response is an array and every pet is pending
+
+└ API-GET-004 Search with multiple status values
+  GET https://petstore.swagger.io/v2/pet/findByStatus?status=available&status=pending [200 OK, 88.16kB, 516ms]
+  √  Status code is 200
+  √  Every pet is available or pending
+
+└ API-GET-005 Invalid status value [expected fail - BUG-001]
+  GET https://petstore.swagger.io/v2/pet/findByStatus?status=notastatus [200 OK, 328B, 261ms]
+  4. Invalid status is rejected with 400
+
+└ API-GET-006 Missing status parameter [expected fail - BUG-001]
+  GET https://petstore.swagger.io/v2/pet/findByStatus [200 OK, 328B, 260ms]
+  5. Missing status parameter is rejected with 400
+
+└ API-GET-007 Created pet appears in the available list
+  GET https://petstore.swagger.io/v2/pet/findByStatus?status=available [200 OK, 88.16kB, 522ms]
+  √  Status code is 200
+  √  Created pet is present in the available list
+
+□ DELETE /pet/{petId}
+└ API-DELETE-001 Delete the pet created by API-POST-001
+  DELETE https://petstore.swagger.io/v2/pet/314904841 [200 OK, 377B, 256ms]
+  √  Status code is 200
+  √  Body reports the deleted id
+
+└ API-DELETE-002 Deleted pet is no longer retrievable
+  GET https://petstore.swagger.io/v2/pet/314904841 [404 Not Found, 384B, 255ms]
+  √  Deleted pet returns 404
+  √  Body says Pet not found
+
+└ API-DELETE-004 Delete a pet that does not exist
+  DELETE https://petstore.swagger.io/v2/pet/314904939 [404 Not Found, 292B, 260ms]
+  √  Deleting a non-existent pet returns 404
+
+└ API-DELETE-005 Non-numeric petId [expected fail - BUG-004]
+  DELETE https://petstore.swagger.io/v2/pet/abc [404 Not Found, 433B, 259ms]
+  6. Non-numeric id is rejected with 400
+
+┌─────────────────────────┬─────────────────────┬─────────────────────┐
+│                         │            executed │              failed │
+├─────────────────────────┼─────────────────────┼─────────────────────┤
+│              iterations │                   1 │                   0 │
+├─────────────────────────┼─────────────────────┼─────────────────────┤
+│                requests │                  16 │                   0 │
+├─────────────────────────┼─────────────────────┼─────────────────────┤
+│            test-scripts │                  16 │                   0 │
+├─────────────────────────┼─────────────────────┼─────────────────────┤
+│      prerequest-scripts │                   1 │                   0 │
+├─────────────────────────┼─────────────────────┼─────────────────────┤
+│              assertions │                  26 │                   6 │
+├─────────────────────────┴─────────────────────┴─────────────────────┤
+│ total run duration: 8.5s                                            │
+├─────────────────────────────────────────────────────────────────────┤
+│ total data received: 264.28kB (approx)                              │
+├─────────────────────────────────────────────────────────────────────┤
+│ average response time: 413ms [min: 255ms, max: 1256ms, s.d.: 321ms] │
+└─────────────────────────────────────────────────────────────────────┘
+
+[31m  # [39m[31m failure        [39m[31m detail                                                                                          [39m
+[90m    [39m[90m                [39m[90m                                                                                                 [39m
+ 1.  AssertionError  Empty payload is rejected with 405                                                              
+                     expected response to have status code 405 but got 200                                           
+                     at assertion:0 in test-script                                                                   
+                     inside "POST /pet / API-POST-004 Empty payload [expected fail - BUG-002]"                       
+[90m    [39m[90m                [39m[90m                                                                                                 [39m
+ 2.  AssertionError  Missing name is rejected with 405                                                               
+                     expected response to have status code 405 but got 200                                           
+                     at assertion:0 in test-script                                                                   
+                     inside "POST /pet / API-POST-005 Missing required field name [expected fail - BUG-002]"         
+[90m    [39m[90m                [39m[90m                                                                                                 [39m
+ 3.  AssertionError  Invalid status value is rejected with 405                                                       
+                     expected response to have status code 405 but got 200                                           
+                     at assertion:0 in test-script                                                                   
+                     inside "POST /pet / API-POST-008 Status outside the enum [expected fail - BUG-002]"             
+[90m    [39m[90m                [39m[90m                                                                                                 [39m
+ 4.  AssertionError  Invalid status is rejected with 400                                                             
+                     expected response to have status code 400 but got 200                                           
+                     at assertion:0 in test-script                                                                   
+                     inside "GET /pet/findByStatus / API-GET-005 Invalid status value [expected fail - BUG-001]"     
+[90m    [39m[90m                [39m[90m                                                                                                 [39m
+ 5.  AssertionError  Missing status parameter is rejected with 400                                                   
+                     expected response to have status code 400 but got 200                                           
+                     at assertion:0 in test-script                                                                   
+                     inside "GET /pet/findByStatus / API-GET-006 Missing status parameter [expected fail - BUG-001]" 
+[90m    [39m[90m                [39m[90m                                                                                                 [39m
+ 6.  AssertionError  Non-numeric id is rejected with 400                                                             
+                     expected response to have status code 400 but got 404                                           
+                     at assertion:0 in test-script                                                                   
+                     inside "DELETE /pet/{petId} / API-DELETE-005 Non-numeric petId [expected fail - BUG-004]"       
