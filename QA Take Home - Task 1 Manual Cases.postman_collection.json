@@ -1,0 +1,758 @@
+{
+  "info": {
+    "_postman_id": "cc863c50-17eb-4c13-a9d6-91014d9a8ecf",
+    "name": "QA Take Home - Task 1 Manual Cases",
+    "description": "Manual API test cases untuk Swagger Petstore (POST /pet, GET /pet/findByStatus, DELETE /pet/{petId}).\n\nCara menjalankannya: jalankan collection dari atas ke bawah (Postman Collection Runner atau newman).\n\nPermintaan pertama menghasilkan unique test untuk seluruh proses pengujian\n\nPermintaan yang ditandai '\\[expected fail\\]' menguji perilaku yang didokumentasikan dan diharapkan gagal — permintaan tersebut menunjukkan defects BUG-001, BUG-002 and BUG-004 yang didokumentasikan di task-1-manual-api/bug-reports/.  \nContoh: newman run postman-collection.json -e postman-environment.json",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "_exporter_id": "20654515",
+    "_collection_link": "https://go.postman.co/collection/20654515-cc863c50-17eb-4c13-a9d6-91014d9a8ecf?source=collection_link"
+  },
+  "item": [
+    {
+      "name": "POST /pet",
+      "item": [
+        {
+          "name": "API-POST-001 Create a pet with a valid payload",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// Generate unique ids once per collection run (this request is the first one).",
+                  "const base = Number(String(Date.now()).slice(-8)) * 10;",
+                  "pm.collectionVariables.set('petId', String(base + 1));",
+                  "pm.collectionVariables.set('petIdMin', String(base + 3));",
+                  "pm.collectionVariables.set('petName', 'QA_Postman_' + Date.now());",
+                  "pm.collectionVariables.set('ghostId', String(base + 99));"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200', () => pm.response.to.have.status(200));",
+                  "const json = pm.response.json();",
+                  "pm.test('Response echoes the submitted id and name', () => {",
+                  "    pm.expect(json.id).to.eql(Number(pm.collectionVariables.get('petId')));",
+                  "    pm.expect(json.name).to.eql(pm.collectionVariables.get('petName'));",
+                  "});",
+                  "pm.test('photoUrls and status are echoed', () => {",
+                  "    pm.expect(json.photoUrls).to.be.an('array').that.is.not.empty;",
+                  "    pm.expect(json.status).to.eql('available');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"id\": {{petId}},\n    \"name\": \"{{petName}}\",\n    \"category\": {\"id\": 1, \"name\": \"dogs\"},\n    \"photoUrls\": [\"https://example.com/qa-postman.jpg\"],\n    \"tags\": [{\"id\": 7, \"name\": \"qa\"}],\n    \"status\": \"available\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/pet",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "pet"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "API-POST-003 Create a pet with required fields only",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200', () => pm.response.to.have.status(200));",
+                  "const json = pm.response.json();",
+                  "pm.test('Pet is created with the submitted id', () => pm.expect(json.id).to.eql(Number(pm.collectionVariables.get('petIdMin'))));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"id\": {{petIdMin}},\n    \"name\": \"QA_Postman_Minimal\",\n    \"photoUrls\": [\"https://example.com/qa-min.jpg\"]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/pet",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "pet"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "API-POST-004 Empty payload [expected fail - BUG-002]",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// Documented behaviour: 405 Invalid input. This assertion fails - see BUG-002.",
+                  "pm.test('Empty payload is rejected with 405', () => pm.response.to.have.status(405));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/pet",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "pet"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "API-POST-005 Missing required field name [expected fail - BUG-002]",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// Documented behaviour: 405 Invalid input (name is required). Fails - see BUG-002.",
+                  "pm.test('Missing name is rejected with 405', () => pm.response.to.have.status(405));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"id\": {{petIdMin}},\n    \"photoUrls\": [\"https://example.com/qa-noname.jpg\"],\n    \"status\": \"available\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/pet",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "pet"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "API-POST-007 Malformed JSON body",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Malformed JSON is rejected with 400', () => pm.response.to.have.status(400));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{ \"id\": 1, \"name\": ",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/pet",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "pet"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "API-POST-008 Status outside the enum [expected fail - BUG-002]",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// Documented behaviour: 405 Invalid input (status enum). Fails - see BUG-002.",
+                  "pm.test('Invalid status value is rejected with 405', () => pm.response.to.have.status(405));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"id\": {{petIdMin}},\n    \"name\": \"QA_Postman_BadStatus\",\n    \"photoUrls\": [],\n    \"status\": \"sleepy\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/pet",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "pet"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "GET /pet/findByStatus",
+      "item": [
+        {
+          "name": "API-GET-001 Find pets by status=available",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200', () => pm.response.to.have.status(200));",
+                  "const list = pm.response.json();",
+                  "pm.test('Response is an array', () => pm.expect(list).to.be.an('array'));",
+                  "pm.test('Every pet matches the requested status', () => {",
+                  "    list.forEach(p => pm.expect(p.status, 'pet id ' + p.id).to.eql('available'));",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/pet/findByStatus?status=available",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "pet",
+                "findByStatus"
+              ],
+              "query": [
+                {
+                  "key": "status",
+                  "value": "available"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "API-GET-002 Find pets by status=pending",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200', () => pm.response.to.have.status(200));",
+                  "const list = pm.response.json();",
+                  "pm.test('Response is an array and every pet is pending', () => {",
+                  "    pm.expect(list).to.be.an('array');",
+                  "    list.forEach(p => pm.expect(p.status).to.eql('pending'));",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/pet/findByStatus?status=pending",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "pet",
+                "findByStatus"
+              ],
+              "query": [
+                {
+                  "key": "status",
+                  "value": "pending"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "API-GET-004 Search with multiple status values",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200', () => pm.response.to.have.status(200));",
+                  "const list = pm.response.json();",
+                  "pm.test('Every pet is available or pending', () => {",
+                  "    const allowed = ['available', 'pending'];",
+                  "    list.forEach(p => pm.expect(allowed).to.include(p.status));",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/pet/findByStatus?status=available&status=pending",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "pet",
+                "findByStatus"
+              ],
+              "query": [
+                {
+                  "key": "status",
+                  "value": "available"
+                },
+                {
+                  "key": "status",
+                  "value": "pending"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "API-GET-005 Invalid status value [expected fail - BUG-001]",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// Documented behaviour: 400 Invalid status value. Fails - see BUG-001.",
+                  "pm.test('Invalid status is rejected with 400', () => pm.response.to.have.status(400));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/pet/findByStatus?status=notastatus",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "pet",
+                "findByStatus"
+              ],
+              "query": [
+                {
+                  "key": "status",
+                  "value": "notastatus"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "API-GET-006 Missing status parameter [expected fail - BUG-001]",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// Documented behaviour: 400 (status is required). Fails - see BUG-001.",
+                  "pm.test('Missing status parameter is rejected with 400', () => pm.response.to.have.status(400));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/pet/findByStatus",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "pet",
+                "findByStatus"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "API-GET-007 Created pet appears in the available list",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200', () => pm.response.to.have.status(200));",
+                  "const list = pm.response.json();",
+                  "pm.test('Created pet is present in the available list', () => {",
+                  "    const id = Number(pm.collectionVariables.get('petId'));",
+                  "    pm.expect(list.some(p => p.id === id), 'pet ' + id + ' not found in ' + list.length + ' entries').to.be.true;",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/pet/findByStatus?status=available",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "pet",
+                "findByStatus"
+              ],
+              "query": [
+                {
+                  "key": "status",
+                  "value": "available"
+                }
+              ]
+            },
+            "description": "Depends on API-POST-001 - run the collection in order."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "DELETE /pet/{petId}",
+      "item": [
+        {
+          "name": "API-DELETE-001 Delete the pet created by API-POST-001",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200', () => pm.response.to.have.status(200));",
+                  "const json = pm.response.json();",
+                  "pm.test('Body reports the deleted id', () => {",
+                  "    pm.expect(json.code).to.eql(200);",
+                  "    pm.expect(String(json.message)).to.eql(pm.collectionVariables.get('petId'));",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/pet/{{petId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "pet",
+                "{{petId}}"
+              ]
+            },
+            "description": "Depends on API-POST-001 - run the collection in order."
+          },
+          "response": []
+        },
+        {
+          "name": "API-DELETE-002 Deleted pet is no longer retrievable",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Deleted pet returns 404', () => pm.response.to.have.status(404));",
+                  "pm.test('Body says Pet not found', () => pm.expect(pm.response.json().message).to.eql('Pet not found'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/pet/{{petId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "pet",
+                "{{petId}}"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "API-DELETE-004 Delete a pet that does not exist",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Deleting a non-existent pet returns 404', () => pm.response.to.have.status(404));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/pet/{{ghostId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "pet",
+                "{{ghostId}}"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "API-DELETE-005 Non-numeric petId [expected fail - BUG-004]",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// Documented behaviour: 400 Invalid ID supplied. Fails - see BUG-004.",
+                  "pm.test('Non-numeric id is rejected with 400', () => pm.response.to.have.status(400));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/pet/abc",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "pet",
+                "abc"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    }
+  ],
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "https://petstore.swagger.io/v2"
+    },
+    {
+      "key": "petId",
+      "value": ""
+    },
+    {
+      "key": "petIdMin",
+      "value": ""
+    },
+    {
+      "key": "petName",
+      "value": ""
+    },
+    {
+      "key": "ghostId",
+      "value": ""
+    }
+  ]
+}

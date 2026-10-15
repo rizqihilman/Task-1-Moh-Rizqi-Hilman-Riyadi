@@ -1,0 +1,12 @@
+{
+  "id": "qa-takehome-petstore-env",
+  "name": "Petstore - QA Take Home",
+  "values": [
+    {
+      "key": "baseUrl",
+      "value": "https://petstore.swagger.io/v2",
+      "enabled": true
+    }
+  ],
+  "_postman_variable_scope": "environment"
+}
